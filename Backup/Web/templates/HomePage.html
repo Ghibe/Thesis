@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<link rel="stylesheet" href="{{url_for('static', filename = 'HomePage.css')}}">
+<script type = "text/javascript" 
+    src = "{{ url_for('static', filename = 'HomePage.js') }}" charset="utf-8" defer></script>
+<head>
+<meta charset="ISO-8859-1">
+<title>GeoData - Find your customers</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://kit.fontawesome.com/cd25322739.js" crossorigin="anonymous"></script>
+
+</head>
+<body>
+<div class="navbarcontainer">
+    <div class="logo">
+        <a href="#"><img src="{{url_for('static', filename='TestLogo.png')}}" alt="logo"></a>
+    </div>
+    <div class="navbar">
+
+        <div class="icon-bar" onclick="Show()">
+            <i></i><!--nav bar mobile,-->
+            <i></i>
+            <i></i>
+        </div>
+
+        <ul id="nav-lists">
+            <li class="close"><span onclick="Hide()">x</span></li>
+            <li><a href="#WhatDoWeDo">What do we do</a></li>
+            <li><a href="#ItalyMap">Italy Map</a></li>
+            <li><a href="#CityMap">City Map</a></li>
+            <li><a href="#StoresMovements">Stores and Movements</a></li>
+            <li><a href="#Contacts">Contacts</a></li>
+        </ul>
+
+    </div>
+</div>
+
+
+    <div class="video-wrapper">
+        <video playsinline autoplay muted loop poster="{{url_for('static', filename='hero.jpg')}}">
+          <source src="{{url_for('static', filename='herovideo.mp4')}}" type="video/webm">
+          Your browser does not support the video tag.
+        </video>
+        
+        <div class="hero">
+            <h1>GeoData</h1>
+            <h2>Find Your Customers</h2>
+        </div>
+    </div>
+
+    <a name="WhatDoWeDo"></a> 
+    <div class="body">
+    <h2 class="titles">What is GeoData?</h2>
+
+    <p>GeoData is a geographic application designed to help managers and marketing teams in locating their customers on different maps.
+    Using statistical and geographic data from open-source databases, GeoData offers a precise indication of customers on the map; 
+    different customers groups can be selected based on average income, age group, marital status and more. </p>
+    </div>
+
+    <div class="features">
+    <h2 class="titles">The Features</h2>
+
+    <div class="row">
+        <div class="column">
+            <i class="fa-solid fa-map fa-5x"></i>
+        <h3 class="columnHeader">Italian map analysis</h3>
+        <p>Find your customers in the italian map, by specifying the desired parameters such as income and marital status. The framework
+            also provides an indication on the center of such cluster, based on the density of population of all the target towns.
+        </p>
+        </div>
+        <div class="column">
+            <i class="fa-solid fa-people-group fa-5x"></i>
+        <h3 class="columnHeader">City map analysis</h3>
+        <p>As big cities show an high density of possible customers, a more in-depth analysis of such cities is available, where it is 
+            possible to locate customers in different parts of the town based on different factors (i.e. Postcodes,
+            identified nuclei etc).</p>
+        </div>
+        <div class="column">
+            <i class="fa-solid fa-route fa-5x"></i>
+        <h3 class="columnHeader">Movements data</h3>
+        <p>As half of the italian population travels outside of the city of residence for work or study, it is important to detect
+            such movements to more precisely suggest where advertisement can be placed ( or where stores can be placed to atract commuters).</p>
+        </div>
+        <div class="column">
+            <i class="fa-solid fa-circle-nodes fa-5x"></i>
+        <h3 class="columnHeader">Find competitors</h3>
+        <p>The framework helps finding competitors and similar brands on the map in the interested area, helping managers in
+            locating groups of stores (where new ones can be placed to exploit the Hotelling's law, or where the damand
+            for certain products is not yet satisfied).</p>
+        </div>
+    </div>
+  </div>
+
+  <div class="body">
+    <h2 class="titles">The Technology</h2>
+
+    <p> Using open-source data from Istat (italian statistical institute), MEF (italian ministry of finances) and census data,
+        a clustering algorithm is applied on over 11 million data rows, in order to find significant groups of possible customers.
+        For city map analysis, data from real-estate websites, openstreetmap and cities open-data is used to show distributions and
+        instances of mvoements and stores. </p>
+    </div>
+
+    <a name="ItalyMap"></a> 
+    <div class="italyMap">
+        <h2 class="titles">Analyse distribution in Italy</h2>
+    
+        <p> Please add the interested informations: </p>
+        <div class = "dataInsert">
+            <select id="ageGroup">
+                <option value="" selected disabled hidden=true>AgeGroup</option>
+                    <option value="Infant">Infant
+                    <option value="Kid">Kid
+                    <option value="Teen">Teen
+                    <option value="20s">20s
+                    <option value="30s">30s
+                    <option value="40s">40s
+                    <option value="50s">50s
+                    <option value="60s">60s
+                    <option value="70s">70s
+                    <option value="80s">80s
+                    <option value="90s">90s  
+                    <option value="100s or older">100s or older
+            </select>
+
+            <select id="Gender">
+                <option value="" selected disabled hidden=true>Gender</option>
+                    <option value="maschi">Males
+                    <option value="femmine">Females
+            </select>
+            <select id="maritalStatus">
+                <option value="" selected disabled hidden=true>Marital Status</option>
+                    <option value="coniugata/o">Married
+                    <option value="nubile/celibe">Single
+                    <option value="vedova/o">Widow/er
+                    <option value="divorziata/o">Divorced
+            </select>
+            <input type="number" name="avgIncome" value="" id = "avgIncome" placeholder = "Average Income (euro)" required>
+            <!--<input type="number" name="avgNumComp" value="" id = "avgNumComp" placeholder = "Average number of components (between 1.8 and 2.7)" required>-->
+            <input type="button" id="showMap" value="Show Map" />
+            <p id = "errorIT"></p>
+        </div>
+        
+        <div style="width:600px;height:600px;" id="ItalyMap"></div>
+        <div id="includedContent"></div>
+
+    
+    </div>
+
+    <a name="CityMap"></a> 
+    <div class="cityMap">
+        <h2 class="titles">Analyse distribution in your city</h2>
+    
+        <p> Please add the interested informations: </p>
+        <div class = "dataInsert">
+            <select id="ageGroupCity">
+                <option value="" selected disabled hidden=true>AgeGroup</option>
+                    <option value="80 anni e più">More than 80 years old
+                    <option value="Da 18 a 34 anni">Between 18 and 34 years old
+                    <option value="Da 35 a 64 anni">Between 35 and 64 years old
+                    <option value="Da 65 a 79 anni">Between 65 and 79 years old
+                    <option value="0-2 anni">Between 0 and 2 years old
+                    <option value="3-12 anni">Between 3 and 12 years old
+                    <option value="13-17 anni">Between 13 and 17 years old
+            </select>
+
+            <select id="GenderCity">
+                <option value="" selected disabled hidden=true>Gender</option>
+                    <option value="Maschi">Males
+                    <option value="Femmine">Females
+            </select>
+            <select id="maritalStatusCity">
+                <option value="" selected disabled hidden=true>Marital Status</option>ù
+                    <option value="Coppia convivente senza figli">Cohabiting couple without children
+                    <option value="Coppia sposata senza figli">Married couple without children
+                    <option value="Single">Single
+                    <option value="Monogenitore con almeno un figlio minorenne">Single parent with at least one underage child
+                    <option value="Monogenitore con figli tutti maggiorenni">Single parent with all adult children
+                    <option value="Coppia convivente con figli tutti maggiorenni">Cohabiting couple with all adult children
+                    <option value="Coppia sposata con figli tutti maggiorenni">Married couple with all adult children
+                    <option value="Coppia convivente con almeno un figlio minorenne">Cohabiting couple with at least one underage child
+                    <option value="Coppia sposata con almeno un figlio minorenne">Married couple with at least one underage child
+                    <option value="Altre tipologie">Others
+            </select>
+            <select id="incomeCity">
+                <option value="" selected disabled hidden=true>Income</option>ù
+                    <option value="Reddito complessivo minore o uguale a zero euro - Frequenza">Total income less than or equal to zero - frequency
+                    <option value="Reddito complessivo minore o uguale a zero euro - Ammontare in euro">Total income less than or equal to zero - amount
+                    <option value="Reddito complessivo da 0 a 10000 euro - Frequenza">Total income between zero and 10000 euro - frequency
+                    <option value="Reddito complessivo da 0 a 10000 euro - Ammontare in euro">Total income between zero and 10000 euro - amount
+                    <option value="Reddito complessivo da 10000 a 15000 euro - Frequenza">Total income between 10000 and 15000 euro - frequency
+                    <option value="Reddito complessivo da 10000 a 15000 euro - Ammontare in euro">Total income between 10000 and 15000 euro - amount
+                    <option value="Reddito complessivo da 15000 a 26000 euro - Frequenza">Total income between 15000 and 26000 euro - frequency
+                    <option value="Reddito complessivo da 15000 a 26000 euro - Ammontare in euro">Total income between 15000 and 26000 euro - amount
+                    <option value="Reddito complessivo da 26000 a 55000 euro - Frequenza">Total income between 26000 and 55000 euro - frequency
+                    <option value="Reddito complessivo da 26000 a 55000 euro - Ammontare in euro">Total income between 26000 and 55000 euro - amount
+                    <option value="Reddito complessivo da 55000 a 75000 euro - Frequenza">Total income between 55000 and 75000 euro - frequency
+                    <option value="Reddito complessivo da 55000 a 75000 euro - Ammontare in euro">Total income between 55000 and 75000 euro - amount
+                    <option value="Reddito complessivo da 75000 a 120000 euro - Frequenza">Total income between 75000 and 120000 euro - frequency
+                    <option value="Reddito complessivo da 75000 a 120000 euro - Ammontare in euro">Total income between 75000 and 120000 euro - amount
+                    <option value="Reddito complessivo oltre 120000 euro - Frequenza">Total income over 120000 euro - frequency
+                    <option value="Reddito complessivo oltre 120000 euro - Ammontare in euro">Total income over 120000 euro - amount
+            </select>
+            <select id="avgNumCompCity">
+                <option value="" selected disabled hidden=true>Number of Components</option>
+                    <option value="1">1
+                    <option value="2">2
+                    <option value="3">3
+                    <option value="4 e più">4 or more
+            </select>
+            <input type="button" id="showMapMilan" value="Show Map" />
+            <input type="button" id="showTransportMilan" value="Show transport stops in Lombardy" />
+            <p id = "errorMil"></p>
+        </div>
+
+        <div style="width:600px;height:600px;" id="milanMuni"></div>
+        <div style="width:600px;height:600px;" id="milanNIL"></div>
+        <div style="width:600px;height:600px;" id="housePrices"></div>
+        <div style="width:600px;height:600px;" id="capIncome"></div>
+        <div style="width:600px;height:600px;" id="movementsMilan"></div>
+        <div style="width:600px;height:600px;" id="transportMilan"></div>
+        
+        <a name="StoresMovements"></a> 
+        <h2 class="titles">Analyse movements and stores in the target area</h2>
+        <p id = "tapArea">Tap on the interested area in one of the map of the city above to see stores or movements to and from that area</p>
+        
+        <div id = "storeSelects">
+            <select id="storeTypes">
+                <option value="" selected disabled hidden=true>Store type</option>
+                    <option value="clothes">Clothes
+                    <option value="perfumery">Perfumery
+                    <option value="jewelry">Jewelry
+                    <option value="sports">Sports
+                    <option value="shoes">Shoes     
+            </select>
+            <input type="text" name="storeNames" value="" id = "storeNames" placeholder = "Store name(s), comma separated">
+            <input type="text" name="brands" value="" id = "brands" placeholder = "Brands, comma separated">
+            <input type="button" id="showStores" value="Show Stores" />
+            <input type="button" id="showMovementsMilan" value="Show movements to and from the selected area" />
+        </div>
+        <p id = "errorStores"></p>
+        <img id="storesImg">
+        <div id = "movements"></div>
+    </div>
+
+
+
+
+
+  <!-- Site footer -->
+  <a name="Contacts"></a> 
+  <footer>
+    <div class="footer-content">
+        <h3>GeoData</h3>
+        <p>Developed as a Master's thesis by Simone Bellini, Politecnico di Milano</p>
+        <p>Reach us on our socials!</p>
+        <ul class="socials">
+            <li><a href="#"><i class="fa fa-facebook"></i></a></li>
+            <li><a href="#"><i class="fa fa-twitter"></i></a></li>
+            <li><a href="#"><i class="fa fa-google-plus"></i></a></li>
+            <li><a href="#"><i class="fa fa-youtube"></i></a></li>
+            <li><a href="#"><i class="fa fa-linkedin-square"></i></a></li>
+        </ul>
+    </div>
+    <div class="footer-bottom">
+        <p>copyright &copy; <a href="#">GeoData</a> | Video by Pressmaster: https://www.pexels.com/video/digital-projection-of-the-earth-mass-in-blue-lights-3129957/</p>
+    </div>
+
+</footer>
+
+
+    <script>
+        var navList = document.getElementById("nav-lists");
+        function Show() {
+        navList.classList.add("_Menus-show");
+        }
+        
+        function Hide(){
+        navList.classList.remove("_Menus-show");
+        }
+    </script>
+  </body>
+  
+  </html>
+</html>
