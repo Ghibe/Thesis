@@ -139,10 +139,8 @@
             <input type="button" id="showMap" value="Show Map" />
             <p id = "errorIT"></p>
         </div>
-        
+        <div id="italydescr"></div>
         <div style="width:600px;height:600px;" id="ItalyMap"></div>
-        <div id="includedContent"></div>
-
     
     </div>
 
@@ -212,18 +210,20 @@
             <p id = "errorMil"></p>
         </div>
 
-        <div style="width:600px;height:600px;" id="milanMuni"></div>
-        <div style="width:600px;height:600px;" id="milanNIL"></div>
-        <div style="width:600px;height:600px;" id="housePrices"></div>
-        <div style="width:600px;height:600px;" id="capIncome"></div>
-        <div style="width:600px;height:600px;" id="movementsMilan"></div>
+        <img id="milanMuni"><p id = "nomilanMuni"></p>
+        <img id="milanNIL"><p id = "nomilanNIL"></p>
+        <img id="capIncome">
         <div style="width:600px;height:600px;" id="transportMilan"></div>
-        
+        <iframe id="housePrices">
+            <p>Your browser does not support iframes.</p>
+            </iframe>
+        <p id = "savedLoc"></p>
+
+
         <a name="StoresMovements"></a> 
-        <h2 class="titles">Analyse movements and stores in the target area</h2>
-        <p id = "tapArea">Tap on the interested area in one of the map of the city above to see stores or movements to and from that area</p>
-        
+        <h2 class="titles">Analyse movements and stores in the target area</h2>        
         <div id = "storeSelects">
+            <p id = "tapArea">Tap on the interested area in one of the map of the city above to see stores or movements to and from that area</p>
             <select id="storeTypes">
                 <option value="" selected disabled hidden=true>Store type</option>
                     <option value="clothes">Clothes
@@ -235,7 +235,7 @@
             <input type="text" name="storeNames" value="" id = "storeNames" placeholder = "Store name(s), comma separated">
             <input type="text" name="brands" value="" id = "brands" placeholder = "Brands, comma separated">
             <input type="button" id="showStores" value="Show Stores" />
-            <input type="button" id="showMovementsMilan" value="Show movements to and from the selected area" />
+            <input type="button" id="showMovementsMilan" value="Show movements" />
         </div>
         <p id = "errorStores"></p>
         <img id="storesImg">

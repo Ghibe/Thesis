@@ -297,6 +297,34 @@
 
 
 
+.plotly-graph-div.js-plotly-plot{
+	width: 100%;
+}
+object{
+	width:600px;
+	height:600px;
+}
+#housePrices{
+	width:600px;
+	height:600px;
+	border:none; 
+	overflow:hidden;
+}
+#milanMuni{
+	overflow:hidden;
+}
+#milanNIL{
+	overflow:hidden;
+}
+#capIncome{
+	overflow:hidden;
+}
+#transportMilan{
+	overflow:hidden;
+}
+
+
+
 footer{
     bottom: 0;
     left: 0;
