@@ -1,7 +1,6 @@
 import random
 import shutil
 import string
-import time
 from flask import Flask, render_template,request, jsonify, session 
 from utility import utility
 import os
@@ -23,7 +22,6 @@ def setUid():
 
 @app.route("/")
 def main(): 
-    print("MAIN")
     if 'uid' not in session:
         setUid()
     return render_template('HomePage.html')
@@ -39,7 +37,22 @@ def italyMap():
     if not [x for x in (ageGroup, gender, maritalStatus, income) if x is None]:
         if 'uid' not in session:
             setUid()
-        url = u.plotItalyCluster(ageGroup,gender,maritalStatus,income,session['uid'])
+        urlAndTable = u.getItalyMap(ageGroup,gender,maritalStatus,income,session['uid'])
+        if urlAndTable is not None:
+            return jsonify([i for i in urlAndTable if i])
+        else:
+            return ('', 204)
+    else:
+        return ('', 204)
+
+@app.route("/ItalyCluster",methods = ['POST', 'GET'])
+def italyCluster():
+    clusterNumber = request.form.get('id', type = int)
+    region = request.form.get('region', type = str)
+    if clusterNumber is not None:
+        if 'uid' not in session:
+            setUid()
+        url = u.plotItalyCluster(clusterNumber,region,session['uid'])
         if url is not None:
             return jsonify(url)
         else:
@@ -60,18 +73,13 @@ def milanMaps():
     if not [x for x in (ageGroup, gender, maritalStatus, numComp) if x is None]:
         urls.append(u.plotMunicipi(ageGroup,gender,maritalStatus,numComp,session['uid']))
         urls.append(u.plotNIL(ageGroup,gender,maritalStatus,numComp,session['uid']))
-    urls.append(u.plotHousePrices())
     if income is not None:
         urls.append(u.plotIncomes(income,session['uid']))
     return jsonify([i for i in urls if i])
 
-@app.route("/ConnectionMilan")
-def connectionMilan():
-    return u.plotConnections()
-
-@app.route("/MovementsMilan", methods = ['POST', 'GET'])#TODO
+@app.route("/MovementsMilan", methods = ['POST', 'GET'])
 def movementsMilan():
-    position = u.getMovPosition(request.form.get('position', type = str))#TODO
+    position = request.form.get('position', type = str)
     if position is not None:
         if 'uid' not in session:
             setUid()
@@ -82,7 +90,7 @@ def movementsMilan():
 
 @app.route("/StoresMilan",methods = ['POST', 'GET'])
 def storesMilan():
-    position = u.getMovPosition(request.form.get('position', type = str))#TODO
+    position = request.form.get('position', type = str)
     storeType = request.form.get('storeType', type = str)
     storeName = request.form.get('storeNames', type = str)
     storeBrand = request.form.get('brands', type = str)
@@ -99,7 +107,6 @@ def storesMilan():
 
 @app.route("/DeleteSession",methods = ['POST', 'GET'])
 def deleteSession():
-    print("DELETE")
     uid = session.pop('uid', None)
     if uid is not None:
         try:

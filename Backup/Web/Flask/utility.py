@@ -15,6 +15,7 @@ import pyproj
 from shapely.ops import transform
 from scipy.spatial.distance import cdist
 import matplotlib
+import shapely
 matplotlib.use('Agg')
 
 
@@ -51,26 +52,29 @@ class utility:
         ox.settings.use_cache=True
 
     def loadDatasetItaly(self,staticFold):
-        self.df= pd.read_csv(path.join(staticFold, "Dataset/clusteringItalia.csv"))
+        self.df= pd.read_csv(path.join(staticFold, "Dataset/clusteringItaliaSOM95SS.csv"))
         clusterNames = []
         for i in range(0,max(self.df.cluster)+1):#For each cluster
-            clusterName = ""
-            for col in self.df.columns: #For each "important" column
-                if (col not in ["Value","Territorio","lat","lng","Size km2","populPerKm2","cluster","ITTER107"]):
-                    if col == "Redditi 2020":
-                        clusterName += str(int(self.df.loc[self.df["cluster"] == i][col].mean())) + " "
-                    elif col == "AvgNumberOfComponents":
-                        clusterName += str(round(self.df.loc[self.df["cluster"] == i][col].mean(),2)) + " "
-                    else:
-                        clusterName += str(self.df.loc[self.df["cluster"] == i][col].value_counts().idxmax()) + " "
-            clusterNames.append(clusterName + str(i))
+            if not self.df.loc[self.df["cluster"] == i].empty:
+                clusterName = ""
+                for col in self.df.columns: #For each "important" column
+                    if (col not in ["Value","Territorio","lat","lng","Size km2","populPerKm2","cluster","ITTER107"]):
+                        if col == "Redditi 2020":
+                            clusterName += str(int(self.df.loc[self.df["cluster"] == i][col].mean())) + " "
+                        elif col == "AvgNumberOfComponents":
+                            clusterName += str(round(self.df.loc[self.df["cluster"] == i][col].mean(),2)) + " "
+                        else:
+                            clusterName += str(self.df.loc[self.df["cluster"] == i][col].value_counts().idxmax()) + " "
+                clusterNames.append(clusterName + str(i))
 
         splitted_search=[x.split(" ") for x in clusterNames]
         self.clusterTypes = pd.DataFrame(splitted_search, columns =['Gender', 'MaritalStatus', 'AgeGroup',
                                                             'AvgIncome','AvgNumComp','cluster'], dtype = str)
         self.clusterTypes["AvgIncome"] = self.clusterTypes["AvgIncome"].astype(int)
         self.clusterTypes["cluster"] = self.clusterTypes["cluster"].astype(int)
-        #Load "shapefile" italy for plotting
+        #Load shapefile italy for plotting
+        self.italyShap = gpd.read_file(path.join(staticFold, "Dataset/Italy/Shapefile")).reset_index().drop(["index"],axis = 1).to_crs(epsg=4326)
+        #Load csv italy for plotting
         self.italy = pd.read_csv(path.join(staticFold, "Dataset/italy.csv"))
 
 
@@ -110,22 +114,63 @@ class utility:
         """ Find closest point from a list of points. """
         return points[cdist([point], points).argmin()]
 
-    def plotItalyCluster(self,ageGroup,gender,maritalStatus,income,uid):
-        curr = self.clusterTypes.loc[(self.clusterTypes["AgeGroup"] == ageGroup) & 
+    def getItalyMap(self,ageGroup,gender,maritalStatus,income,uid):
+        currClusters = self.clusterTypes.loc[(self.clusterTypes["AgeGroup"] == ageGroup) & 
                                         (self.clusterTypes["Gender"] == gender) & 
                                         (self.clusterTypes["MaritalStatus"] == maritalStatus)]
-        def takeClosest(curr, targetIncome):
+        def takeClosest(curr, targetIncome,alreadySelected):
             closestIncome = curr.iloc[:1]["AvgIncome"].values[0]
             for i in range(1, curr.shape[0]):    
                 currInc = curr.iloc[i:i+1]["AvgIncome"].values[0]
-                if abs(currInc - targetIncome) < abs(closestIncome - targetIncome):
+                if (abs(currInc - targetIncome) < abs(closestIncome - targetIncome)) and (currInc not in alreadySelected):
                     closestIncome = currInc
             return closestIncome
-        if curr.shape[0]!=0:
+        if currClusters.shape[0]!=0:
             #Select points
-            curr = curr.loc[curr["AvgIncome"] == takeClosest(curr,income)]#Text of current cluster
-            selectedClusterPoints = self.df.loc[self.df["cluster"] == curr["cluster"].values[0]]
+            regions = []
+            cities = []
+            clusters = []
+            alreadySelectedInc = []
+            for _ in range (0,5):#Get top 5 regions with
+                inc = takeClosest(currClusters,income,alreadySelectedInc)
+                curr = currClusters.loc[currClusters["AvgIncome"] == inc]#Text of current cluster
+                if inc not in alreadySelectedInc:#If it is already done
+                    alreadySelectedInc.append(inc)
+                    clusters.append(int(curr["cluster"].values[0]))
+                    selectedClusterPoints = self.df.loc[self.df["cluster"] == curr["cluster"].values[0]]
 
+                    clf = IsolationForest( random_state=0).fit_predict(selectedClusterPoints[["lng","lat"]].values)#Schema a blochi pptx
+
+                    lonC, latC = self.calculateWeightedMean(selectedClusterPoints["lat"], 
+                                selectedClusterPoints["lng"], selectedClusterPoints["populPerKm2"],clf)
+                    closest = self.closest_point((lonC,latC), list(zip(selectedClusterPoints["lng"], selectedClusterPoints["lat"])))
+                    cities.append(selectedClusterPoints.loc[(selectedClusterPoints["lng"] == closest[0])&
+                                            (selectedClusterPoints["lat"] == closest[1])]["Territorio"].values[0])#Get city of center of cluster
+                                
+                    point = gpd.points_from_xy([closest[0]], [closest[1]]) 
+                    regions.append(self.italyShap[self.italyShap.contains(point[0])]["DEN_REG"].values[0])#Get region of center of cluster
+
+            _, ax = plt.subplots(figsize=(15, 15))
+            self.italyShap["where"]=np.zeros(len(self.italyShap))
+            self.italyShap.loc[self.italyShap['DEN_REG'].isin(regions),'where'] = 10.0
+            self.italyShap.plot(column= self.italyShap["where"], alpha=0.5, edgecolor='k',ax=ax,cmap = "Reds")
+            plt.axis('off')
+            ax.figure.suptitle("Regioni con cluster selezionato")
+            img = "static/Maps/"+uid+"/italyMap.png"
+            ax.figure.savefig(img)
+            retList = []
+            retList.append(img+"?rand=" + str(random.randint(0, 1000)))
+            retList.append(cities)
+            retList.append(regions)
+            retList.append(clusters)
+            return retList
+        else:
+            return
+    
+    def plotItalyCluster(self,clusterNumber,region,uid):
+        selectedClusterPoints = self.df.loc[self.df["cluster"] == clusterNumber]
+        curr = self.clusterTypes.loc[self.clusterTypes["cluster"] == clusterNumber]
+        if selectedClusterPoints.shape[0]!=0:
             clf = IsolationForest( random_state=0).fit_predict(selectedClusterPoints[["lng","lat"]].values)#Schema a blochi pptx
 
             lonC, latC = self.calculateWeightedMean(selectedClusterPoints["lat"], 
@@ -133,29 +178,18 @@ class utility:
             circle = self.kmRadius((lonC,latC))
             closest = self.closest_point((lonC,latC), list(zip(selectedClusterPoints["lng"], selectedClusterPoints["lat"])))#Get closest point from picked
 
-            xp = np.append(selectedClusterPoints["lng"].values,np.append(circle[:,0],lonC))
-            yp = np.append(selectedClusterPoints["lat"].values,np.append(circle[:,1],latC))
-            zp = np.append(selectedClusterPoints["populPerKm2"].values,np.append(np.zeros(len(circle[:,1])),0))
-            color = np.append(clf,np.append(np.zeros(len(circle[:,1])),5))
+            clf = np.where(clf > 0, "#BBF90F", "#929591")            
             scatt = []
-            #Draw Italy from csv
-            for i in range (0,len(self.italy),2):
-                x = self.italy.loc[i].values
-                x = x[~np.isnan(x)]
-                y = self.italy.loc[i+1].values
-                y = y[~np.isnan(y)]
-                scatt.append(go.Scatter3d(x=x, y=y, z=np.zeros(len(x)),showlegend=False,
-                    mode='lines',
-                    marker=dict(
-                            color="lime",                # set color to an array/list of desired values
-                            colorscale='Viridis',   # choose a colorscale
-                            opacity=0.8,
-                        )
-                    )
-                )
-            #Add data cluster
+
+            color = np.append(np.repeat("#0000FF",len(circle[:,1])),"#FF4500")         
+            xp = np.append(circle[:,0],lonC)
+            yp = np.append(circle[:,1],latC)
+            zp = np.append(np.zeros(len(circle[:,1])),0)
+            # Circle + center
             scatt.append(go.Scatter3d(x=xp, y=yp, z=zp,showlegend=False,
-                                        mode='markers',hovertext =selectedClusterPoints["Territorio"],
+                                        mode='markers',
+                                        hoverinfo='skip',
+                                        #+ '%{customdata[2]}' + '%{customdata[3]}',
                                         marker=dict(
                                                 color=color,                # set color to an array/list of desired values
                                                 colorscale='Viridis',   # choose a colorscale
@@ -163,16 +197,87 @@ class utility:
                                             )
                                         )
                         )
+            
+            #Add data cluster
+            customData = selectedClusterPoints[["Territorio","populPerKm2"]]#selectedClusterPoints[["Territorio","Sesso","Stato civile","AgeGroup"]],
+            customData["populPerKm2"] = customData["populPerKm2"].astype(int)
+            # customData.loc[len(customData)] = ["area of", "attractiveness"]
+            # print(customData)
+            xp = selectedClusterPoints["lng"].values
+            yp = selectedClusterPoints["lat"].values
+            zp = selectedClusterPoints["populPerKm2"].values
+            #Points
+            scatt.append(go.Scatter3d(x=xp, y=yp, z=zp,
+                                        showlegend=False,
+                                        mode='markers',
+                                        customdata=customData,
+                                        hovertemplate='%{customdata[0]}'+' \n Popolazione per km2: %{customdata[1]} ',
+                                        #+ '%{customdata[2]}' + '%{customdata[3]}',
+                                        marker=dict(
+                                                color=clf,                # set color to an array/list of desired values
+                                                colorscale='Viridis',   # choose a colorscale
+                                                opacity=0.8,
+                                            )
+                                        )
+                        )            
+            #Add vertical lines
+            linex = np.array(list(zip(xp,xp,np.full(len(xp), None)))).flatten()
+            liney = np.array(list(zip(yp,yp,np.full(len(xp), None)))).flatten()
+            linez = np.array(list(zip(zp,np.zeros(len(xp)),np.full(len(xp), None)))).flatten()
+            scatt.append(go.Scatter3d(x=linex, y=liney, z=linez,
+                                        showlegend=False,
+                                        mode='lines',hoverinfo='skip',
+                                        marker=dict(
+                                            color="black",                # set color to an array/list of desired values
+                                            colorscale='Viridis',   # choose a colorscale
+                                            opacity=0.8,
+                                        )
+                                        ))
+            
+            for i in range (0,len(self.italyShap)):
+                if self.italyShap ["DEN_REG"][i] == region:
+                    if isinstance(self.italyShap["geometry"][i], shapely.geometry.multipolygon.MultiPolygon):
+                        for polygon in self.italyShap["geometry"][i]:
+                            x = np.asarray(polygon.exterior.coords.xy[0])
+                            y = np.asarray(polygon.exterior.coords.xy[1])
+                            z = np.zeros(len(polygon.exterior.coords.xy[1]))
+                            scatt.append(go.Scatter3d(x=x, y=y, z=z,showlegend=False,
+                                                mode='lines',hoverinfo='skip',
+                                                marker=dict(
+                                                    color="lime",                # set color to an array/list of desired values
+                                                    colorscale='Viridis',   # choose a colorscale
+                                                    opacity=0.8,
+                                                )
+                                                ))
+                    else:
+                        x = np.asarray(self.italyShap["geometry"][i].exterior.coords.xy[0])
+                        y = np.asarray(self.italyShap["geometry"][i].exterior.coords.xy[1])
+                        z = np.zeros(len(self.italyShap["geometry"][i].exterior.coords.xy[1]))
 
+                        scatt.append(go.Scatter3d(x=x, y=y, z=z,showlegend=False,
+                                                mode='lines',hoverinfo='skip',
+                                                marker=dict(
+                                                    color="lime",                # set color to an array/list of desired values
+                                                    colorscale='Viridis',   # choose a colorscale
+                                                    opacity=0.8,
+                                                )
+                                                ))
             text = str(curr.values[0][0]) + " " + str(curr.values[0][1]) + " " + str(curr.values[0][2]) + " Redditi: " + str(curr.values[0][3]) + " Numero medio di componenti: " + str(curr.values[0][4])
 
-            text += '\n' + 'Center is located in: %s' % (selectedClusterPoints.loc[(selectedClusterPoints["lng"] == closest[0])&
+            text += '<br>' + 'Center is located in: %s' % (selectedClusterPoints.loc[(selectedClusterPoints["lng"] == closest[0])&
                                         (selectedClusterPoints["lat"] == closest[1])]["Territorio"].values[0])
             camera = dict(
                 eye=dict(x=0, y=0, z=1),
                 up=dict(x=0, y=1, z=0)
             )
             fig = go.Figure(data=scatt)
+            fig.update_layout(scene = dict(
+                    zaxis_title='Popolazione per km2',
+                    xaxis_title='',
+                    yaxis_title='',
+                    xaxis=dict(showticklabels=False),
+                    yaxis=dict(showticklabels=False)
+                    ))
             fig.update_layout(scene_camera=camera)
 
             url = "static/Maps/"+uid+"/clusterItaly.html"
@@ -182,9 +287,6 @@ class utility:
             return #No clusters found
         #Careful with -1 if use HDBSCAN
 
-    def plotConnections(self):
-        return "static/Maps/transportMilan.html"
-
     def plotMunicipi(self,ageGroup,gender,maritalStatus,numComp,uid):
         considered = self.popMilano.loc[(self.popMilano["Classe_eta_capofamiglia"] == ageGroup)&
                         (self.popMilano["Genere_capofamiglia"] == gender)&
@@ -193,7 +295,7 @@ class utility:
         considered = considered.sort_values(by=['Municipio']).reset_index().drop(["index"],axis = 1)# Sort 
         if len(considered) != 9 or considered.empty: #Need to have data for all Municipi
             return
-        fig, ax = plt.subplots(figsize=(15, 15))
+        _, ax = plt.subplots(figsize=(15, 15))
         color = "Reds"
         vmin = considered["Frq"].min()
         vmax = considered["Frq"].max()
@@ -208,26 +310,11 @@ class utility:
         self.municipi.apply(lambda x: ax.annotate(text=x['MUNICIPIO'], xy=x.geometry.centroid.coords[0], ha='center',fontsize=20), axis=1)
         img = "static/Maps/"+uid+"/municipiMilan.png"
         ax.figure.savefig(img)
-        # fig = px.choropleth_mapbox(
-        #     self.municipi, municipi not in crs different
-        #     geojson=self.municipi,
-        #     locations=self.municipi.index,
-        #     hover_data =[self.municipi.MUNICIPIO], #Other written
-        #     opacity =0.5,
-        #     color = considered["Frq"], #Color zones
-        #     center=dict(lat=45.45, lon=9.18),
-        #     mapbox_style="open-street-map",
-        #     zoom=11,
-        #     height = 600,
-        #     width = 600,
-        #     labels={'MUNICIPIO':'Municipio','Frq':'Numero', 'color': 'Quantità'},
-        #     color_continuous_scale = "peach",
-        #     title = 'Numero di %s, %s, %s, con famiglie da %s componenti' %(maritalStatus,gender,ageGroup,numComp)
-        # )
-        # fig.update_geos(fitbounds="locations", visible=True)
-        # url = "static/Maps/"+uid+"/municipiGroup.html"
-        # fig.write_html(url)
-        return img+"?rand=" + str(random.randint(0, 1000))
+        retList = []
+        retList.append(img+"?rand=" + str(random.randint(0, 1000)))
+        retList.append(considered.sort_values(by=['Frq'],ascending = False).iloc[0:3]["Municipio"].values.tolist())
+        retList.append(considered.sort_values(by=['Frq'],ascending = False).iloc[0:3]["Frq"].values.tolist())
+        return retList
 
     def plotNIL(self,ageGroup,gender,maritalStatus,numComp,uid):
         considered = self.popMilano.loc[(self.popMilano["Classe_eta_capofamiglia"] == ageGroup)&
@@ -256,32 +343,13 @@ class utility:
             consideredNIL.apply(lambda x: ax.annotate(text=x['NIL'], xy=x.geometry.centroid.coords[0], ha='center',fontsize=7), axis=1)
             img = "static/Maps/"+uid+"/NILMilan.png"
             ax.figure.savefig(img)
-            return img+"?rand=" + str(random.randint(0, 1000))
-            # fig = px.choropleth_mapbox( no crs
-            #     self.nil,
-            #     geojson=self.nil,
-            #     locations=self.nil.index,
-            #     hover_data =[self.nil.NIL], #Bold name
-            #     opacity =0.5,
-            #     color = consideredNIL["RelFrq"], #Color zones
-            #     center=dict(lat=45.45, lon=9.18),
-            #     mapbox_style="open-street-map",
-            #     zoom=11,
-            #     height = 600,
-            #     width = 600,
-            #     labels={'NIL':'Quartiere','RelFrq':'Quantità', 'color': 'Quantità'},
-            #     color_continuous_scale = "peach",
-            #     title = 'Numero di %s, %s, %s, con famiglie da %s componenti' %(maritalStatus,gender,ageGroup,numComp)
-            # )
-            # fig.update_geos(fitbounds="locations", visible=True)
-            # url = "static/Maps/"+uid+"/NILGroup.html"
-            # fig.write_html(url)
-            # return url
+            retList = []
+            retList.append(img+"?rand=" + str(random.randint(0, 1000)))
+            retList.append(consideredNIL.sort_values(by=['RelFrq'],ascending = False).iloc[0:3]["NIL"].values.tolist())
+            retList.append(consideredNIL.sort_values(by=['RelFrq'],ascending = False).iloc[0:3]["RelFrq"].values.astype(int).tolist())
+            return retList
         else:
             return 
-
-    def plotHousePrices(self):
-        return "static/Maps/pricesMilan.html"
 
     def plotIncomes(self,income,uid):
         consideredRed = self.redditi.loc[(self.redditi["Redditi e variabili IRPEF"] == income)]
@@ -304,33 +372,28 @@ class utility:
         self.capZone.apply(lambda x: ax.annotate(text=x['CAP'], xy=x.geometry.centroid.coords[0], ha='center',fontsize=20), axis=1)
         img = "static/Maps/"+uid+"/incomeSelected.png"
         ax.figure.savefig(img)
-        return img+"?rand=" + str(random.randint(0, 1000))
-        # fig = px.choropleth_mapbox(
-        #     self.capZone,
-        #     geojson=self.capZone,
-        #     locations=self.capZone.index,
-        #     hover_name =self.capZone.CAP, #Bold name
-        #     opacity =0.5,
-        #     color = consideredRed.Valori, #Color zones
-        #     center=dict(lat=45.45, lon=9.18),
-        #     mapbox_style="open-street-map",
-        #     zoom=11,
-        #     height = 600,
-        #     width = 600,
-        #     labels={'color':label,'AREA':'area'},
-        #     title = income
-        # )
-        # fig.update_geos(fitbounds="locations", visible=True)
+        retList = []
+        retList.append(img+"?rand=" + str(random.randint(0, 1000)))
+        retList.append(consideredRed.sort_values(by=['Valori'],ascending = False).iloc[0:3]["CAP"].values.tolist())
+        retList.append(consideredRed.sort_values(by=['Valori'],ascending = False).iloc[0:3]["Valori"].values.tolist())
+        return retList
 
-        # url = "static/Maps/"+uid+"/incomeSelected.html"
-        # fig.write_html(url)
-        # return url
     
     def plotStores(self,position,storeType,storeName,storeBrand,uid):
         selectedZone = self.movShap.loc[self.movShap["desc_zona"] == position]
         typeOfShop = ox.geometries.geometries_from_polygon(selectedZone["geometry"].values[0], tags = { 'shop':storeType})
+        west, south, east, north = selectedZone.total_bounds
+        points = gpd.points_from_xy([west,east], [south,north])
+        print(west, south, east, north)
         typeOfShop = typeOfShop.to_crs(epsg=3857)
+        if(len(typeOfShop) == 0):
+            return
         ax = typeOfShop.plot(figsize=(10, 10), alpha=0.5, edgecolor='k', color = "b")
+        print(points)
+        pointsGdf = gpd.GeoDataFrame(points,geometry = points)
+        pointsGdf= pointsGdf.set_crs('epsg:4326')
+        pointsGdf = pointsGdf.to_crs(epsg=3857)
+        pointsGdf.plot(ax=ax,alpha = 0)
         cx.add_basemap(ax,source="static/Maps/MilanSmall.tif")
         plt.axis('off')
         if storeName is not None and storeName != '':
@@ -410,13 +473,13 @@ class utility:
             gdf= gdf[gdf["PROV_ORIG"].notna()]
             gdf.apply(lambda x: 
                 ax.annotate(#Put name of centres
-                    text=x['PROV_ORIG'], xy=(x.geometry.centroid.coords[0][0],x.geometry.centroid.coords[0][1]+800), ha='center',fontsize=15),axis=1)
+                    text=x['PROV_ORIG'], xy=(x.geometry.centroid.coords[0][0],x.geometry.centroid.coords[0][1]-5000), ha='center',fontsize=15),axis=1)
             outPic = "static/Maps/"+uid+"/outside" + movType +".png"   
             ax.figure.savefig(outPic)
             img.append(outPic+"?rand=" + str(random.randint(0, 1000)))    
                 
         #Inside movements
-        if currGroupInside.empty:
+        if currGroupInside.empty or len(currGroupInside) ==1:
             print('No consistent inside traffic to target area')
         else:
             #Get location of inside points
@@ -473,13 +536,13 @@ class utility:
         
         return img
 
-    def getMovPosition(self, position):
-        try:
-            lat,lon = position.split("$")
-            lat = float(lat)
-            lon = float(lon)
-        except:
-            return
-        point = gpd.points_from_xy([lon], [lat])
-        pos = self.movShap[self.movShap.contains(point[0])]["desc_zona"].values[0]
-        return pos
+    # def getMovPosition(self, position):
+    #     try:
+    #         lat,lon = position.split("$")
+    #         lat = float(lat)
+    #         lon = float(lon)
+    #     except:
+    #         return
+    #     point = gpd.points_from_xy([lon], [lat])
+    #     pos = self.movShap[self.movShap.contains(point[0])]["desc_zona"].values[0]
+    #     return pos

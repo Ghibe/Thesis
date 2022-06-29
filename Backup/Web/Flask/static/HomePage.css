@@ -194,7 +194,7 @@
 	}
 
     .video-wrapper {
-      background: url("hero.jpg") no-repeat;
+      background: url("hero.jpg");
       background-size: cover;
 	}
     video { display: none; }
@@ -229,11 +229,17 @@
   }
   
   .hero >  h1 {
-	font-size: 5rem;
+	font-size: 10rem;
 	margin-top: 30vh;
+	margin-block-start: 0em;
+    margin-block-end: 0em;
   }
   
-  .hero >   h2 { font-size: 3rem; }
+  .hero >   h2 { 
+	font-size: 3rem;
+	margin-block-start: 0em;
+    margin-block-end: 0em; 
+}
   
   
   .body {
@@ -258,9 +264,6 @@
 	padding-bottom: 100px;
 	margin: 0 calc(10%/6);
 	text-align: center;
-	box-shadow: 0px 0px 5px 1px rgba(0,0,0,0.2);
-	-webkit-box-shadow: 0px 0px 5px 1px rgba(0,0,0,0.2);
-	-moz-box-shadow: 0px 0px 5px 1px rgba(0,0,0,0.2);
   }
 
   .column > p{text-align: justify;}
@@ -295,35 +298,14 @@
 	background-size: cover;
 }
 
-
-
 .plotly-graph-div.js-plotly-plot{
 	width: 100%;
 }
 object{
-	width:600px;
-	height:600px;
+	height: 100%;
+	width: 100%;
+	overflow: visible;
 }
-#housePrices{
-	width:600px;
-	height:600px;
-	border:none; 
-	overflow:hidden;
-}
-#milanMuni{
-	overflow:hidden;
-}
-#milanNIL{
-	overflow:hidden;
-}
-#capIncome{
-	overflow:hidden;
-}
-#transportMilan{
-	overflow:hidden;
-}
-
-
 
 footer{
     bottom: 0;
@@ -408,3 +390,81 @@ float: left;
     opacity: .4;
     font-weight: 200;
 }
+
+
+  .layoutColumn {
+	float: left;
+	width: 50%;
+	position:relative;
+  }
+
+  
+  /* Responsive layout - makes the three columns stack on top of each other instead of next to each other */
+  @media screen and (max-width: 600px) {
+	.layoutColumn {
+	  width: 100%;
+	}
+  }
+  
+  /* Clear floats after the columns */
+  .layoutRow:after {
+	content: "";
+	display: table;
+	clear: both;
+  }
+
+.descriptionTable {
+    position: absolute;
+    right: 3%;
+    padding-top: 5%;
+    font-size: 70%;
+  }
+
+ .image {
+	width: 100%;
+	height: auto;
+  }
+
+.formRow {
+	text-align: center;
+	padding: 5%;
+	font-size: 120%;
+  }
+
+.dataInsert > select, .dataInsert > button, .dataInsert > input, #storeSelects > select, #storeSelects > button, #storeSelects > input {
+	cursor: pointer;
+	border: solid black 1px;
+	border-radius: 5px;
+	padding: 5px;
+}
+
+.imgDiv {
+	padding-top: 10%;
+}
+
+#italydescr {
+	text-align: center;
+}
+
+#showMovementsMilan, #showTransportMilan {
+	margin-top: 20px;
+}
+
+.singleColumn {
+	width: 100%;
+	position:relative;
+    text-align: center;
+}
+
+.singleColumn > .image {
+	width: 50%;
+}
+.interactiveImage{
+	width:700px;
+	height:700px;
+}
+.formRowZones {
+	text-align: center;
+	font-size: 120%;
+}
+
