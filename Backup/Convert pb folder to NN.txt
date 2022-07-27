@@ -1,0 +1,53 @@
+Install openvino-dev in environment
+Install openvino runtime exe
+--------------------------------------- 2022
+Da anaconda prompt
+Tensorflow env
+da cartella con mo.py che è
+ D:\Python\Anaconda\envs\tensorflowEnv\Lib\site-packages\openvino\tools\mo>
+
+python mo.py --saved_model_dir "D:\Backup\Scuola\Magistrale\II anno\II semestre\model" -o "D:\Backup\Scuola\Magistrale\II anno\II semestre\BS4"
+
+reverse_input_channels?
+
+Set environment variables for dll for compile 
+(FOr omx D:\Python\Anaconda\envs\tensorflowEnv\Scripts)
+Open compile tool from linux shell
+
+./compile_tool.exe -m "D:\Backup\Scuola\Magistrale\II anno\II semestre\BS4\saved_model.xml" -d MYRIAD
+
+EXample in
+D:\Python\Anaconda\envs\tensorflowEnv\Lib\site-packages\openvino\model_zoo\download_engine\public\alexnet\FP16
+
+
+---------------2021
+
+
+Da anaconda prompt
+Tensorflow env
+da cartella con mo.py che è
+D:\Programmi\OpenVino2021\openvino_2021.4.752\deployment_tools\model_optimizer
+
+python mo.py --saved_model_dir "D:\Backup\Scuola\Magistrale\II anno\II semestre\funzia267" -o "D:\Backup\Scuola\Magistrale\II anno\II semestre\BS4"
+--input_shape [1,224,224,3]
+reverse_input_channels?
+
+
+Set environment variables for dll for compile 
+(FOr omx D:\Python\Anaconda\envs\tensorflowEnv\Scripts)
+Open compile tool from linux shell (the 2021 one)
+
+
+./compile_tool.exe -m "D:\Backup\Scuola\Magistrale\II anno\II semestre\BS4\saved_model.xml" -d MYRIAD -o "D:\Backup\Scuola\Magistrale\II anno\II semestre\BS4\dog.blob"
+
+Or through web app/blobconverter from Luxonis
+
+EXample in
+D:\Programmi\OpenVino2021\openvino_2021.4.752\deployment_tools\open_model_zoo\tools\downloader\public\alexnet\FP16
+
+
+
+
+Can test if it works using model checker --> check if original pb/h5 model works (load with keras)
+					--> check if IR model works (load with openvino)
+					--> check if blob works??
